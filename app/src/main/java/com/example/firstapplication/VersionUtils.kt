@@ -35,8 +35,12 @@ object VersionUtils {
         minRequired: String,
     ): Boolean = compare(current, minRequired) < 0
 
+    // 🐛 故意植入的真实 bug：把数值比较改成了字典序比较。
+    //    这是版本号比较最经典的错误——字典序下 "9" > "10"，
+    //    于是 1.10.0 会被判定为小于 1.9.0，用户永远收不到 1.10 的强更。
+    //    用于验证 CI 的关卡 2（单元测试）能否拦住它。演练结束后回滚。
     private fun parse(version: String): List<Int> =
         version.trim()
             .split(".")
-            .map { part -> part.trim().toIntOrNull() ?: 0 }
+            .map { part -> part.trim().firstOrNull()?.code ?: 0 }
 }
