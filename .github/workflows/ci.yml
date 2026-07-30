@@ -29,14 +29,18 @@ jobs:
       # ── 第 2 步：装 JDK ──────────────────────────────────
       # Gradle 本身是 Java 程序，必须先有 JDK 才能跑 ./gradlew
       #
-      # ⚠️ 这里就是我埋的错。跑完看日志，你会看到一条很明确的报错。
-      #    提示：注意区分「运行 Gradle 的 JDK」和 app/build.gradle.kts 里的
-      #    jvmTarget = "11"——它们是两个完全不同的东西。
+      # 📌 红#1 的教训：这里必须 >= 17，因为 AGP 8.x 硬性要求 JDK 17+ 才能运行
+      #    （注意是 AGP 要求的，不是 Gradle——Gradle 8.11.1 本身 JDK 8~23 都能跑）
+      #
+      #    这个 17 和 app/build.gradle.kts 里的 jvmTarget = "11" 是两件独立的事：
+      #      17 = 谁来跑编译（构建期工具链的 JDK）      ← AGP 版本决定
+      #      11 = 编译出什么（产物的字节码版本）        ← minSdk / 兼容性决定
+      #    用 JDK 17 跑构建、同时产出 Java 11 字节码，是完全正常的配置。
       - name: 安装 JDK
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '11'
+          java-version: '17'
 
       # ── 第 3 步：编译 ────────────────────────────────────
       # 注意这里没有配 Android SDK：GitHub 的 ubuntu runner 预装了 Android SDK
