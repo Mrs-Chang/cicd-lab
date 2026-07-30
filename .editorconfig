@@ -1,0 +1,28 @@
+# ktlint 规则配置。
+#
+# 为什么需要这个文件：把 linter 引入一个已有的 Compose 项目时，
+# 通用 Kotlin 规范和框架约定会打架。ktlint 的 standard:function-naming
+# 要求函数名 camelCase，但 Compose 官方约定 @Composable 函数用 PascalCase
+# （Greeting()、MyTheme()）。这不是代码错了，是规则需要配。
+#
+# 👉 面试点：引入静态检查工具的成本不在「装上」，而在「调和规则与现实」。
+#    只会 ignoreFailures=true 的人，等于装了个不干活的门禁。
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{kt,kts}]
+indent_size = 4
+indent_style = space
+
+# @Composable 函数豁免 camelCase 命名检查
+ktlint_function_naming_ignore_when_annotated_with = Composable
+
+[*.{yml,yaml,json}]
+indent_size = 2
+indent_style = space
