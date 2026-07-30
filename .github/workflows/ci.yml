@@ -1,0 +1,46 @@
+# Week 1 Day 1：最小可跑的 Android CI
+#
+# 目标只有一个：让远端机器把这个项目编译出来。
+# 本版本故意埋了一个错误（见下方 ⚠️），第一次运行会红。
+# 任务：不要看答案，先读 Actions 日志自己定位。
+
+name: CI
+
+# ── on：什么事件触发这条流水线 ──────────────────────────────
+# 这是整个 CI 的"开关"。写错这里，流水线永远不会跑。
+on:
+  push:                      # 有人 push 时跑
+    branches: [ main ]
+  pull_request:              # 有人开 PR 时也跑
+  workflow_dispatch:         # 允许在 Actions 页面手动点一下跑（调试期很有用）
+
+jobs:
+  build:
+    # runs-on：这条 job 跑在什么机器上。
+    # ubuntu-latest 是 Linux runner，计费倍率 1x（macOS 是 10x，Android 构建别用）
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 第 1 步：把代码搞到这台机器上 ──────────────────────
+      # runner 是一台全新的空机器，什么都没有。不 checkout 就没有代码。
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      # ── 第 2 步：装 JDK ──────────────────────────────────
+      # Gradle 本身是 Java 程序，必须先有 JDK 才能跑 ./gradlew
+      #
+      # ⚠️ 这里就是我埋的错。跑完看日志，你会看到一条很明确的报错。
+      #    提示：注意区分「运行 Gradle 的 JDK」和 app/build.gradle.kts 里的
+      #    jvmTarget = "11"——它们是两个完全不同的东西。
+      - name: 安装 JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '11'
+
+      # ── 第 3 步：编译 ────────────────────────────────────
+      # 注意这里没有配 Android SDK：GitHub 的 ubuntu runner 预装了 Android SDK
+      # 并设好了 ANDROID_HOME，所以不需要 local.properties
+      # （local.properties 里的 sdk.dir 是机器相关路径，绝不能提交进仓库）
+      - name: 编译 Debug 包
+        run: ./gradlew assembleDebug --stacktrace
