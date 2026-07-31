@@ -2,6 +2,20 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ktlint)
+}
+
+// ktlint 规则配置。本地 `./gradlew ktlintCheck` 和 CI 跑的是同一套规则、同一条命令。
+// 不用 reporters 配置——默认 PLAIN reporter 内置，不额外拉依赖。
+ktlint {
+    // 采用 Android 风格约定（如缩进 4 空格）
+    android.set(true)
+    // 有违规就让构建失败。设成 true 等于装了个不干活的门禁
+    ignoreFailures.set(false)
+    filter {
+        // 生成的代码不参与检查
+        exclude { it.file.path.contains("/build/") }
+    }
 }
 
 android {
@@ -23,7 +37,7 @@ android {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
         }
     }
