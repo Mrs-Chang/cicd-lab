@@ -61,7 +61,7 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: temurin          # JDK 发行版，用 temurin 就行
-          java-version: '11'
+          java-version: '17'
 
       # ── 第 3 步：编译 ────────────────────────────────────
       # 这步是跑命令，不是用 action，所以关键字是 run 而不是 uses。
