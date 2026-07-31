@@ -1,0 +1,21 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{kt,kts}]
+indent_style = space
+indent_size = 4
+
+# Compose 的 @Composable 函数按官方约定用 PascalCase（Greeting、MyAppTheme），
+# 与 Kotlin 通用的 camelCase 函数命名规范冲突。
+# 这里只对带 @Composable 注解的函数豁免，普通函数仍受 function-naming 规则约束
+# —— 不能直接 disable 整条规则，那会连真正该管的函数一起放过。
+ktlint_function_naming_ignore_when_annotated_with = Composable
+
+[*.{yml,yaml,json,xml}]
+indent_style = space
+indent_size = 2

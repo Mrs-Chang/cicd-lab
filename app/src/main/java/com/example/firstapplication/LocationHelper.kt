@@ -132,8 +132,10 @@ class LocationHelper(private val activity: ComponentActivity) {
             // 注册位置更新
             locationManager.requestLocationUpdates(
                 provider,
-                1000, // 最小时间间隔（毫秒）
-                1f, // 最小距离变化（米）
+                // 最小时间间隔（毫秒）
+                1000,
+                // 最小距离变化（米）
+                1f,
                 locationListener,
             )
         } catch (e: Exception) {
