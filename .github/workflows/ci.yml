@@ -1,0 +1,95 @@
+# ═══════════════════════════════════════════════════════════════
+#  Day 1 练习模版
+#
+#  凡是 <<< ... >>> 的地方都要你自己填。填完把这些提示注释删掉。
+#
+#  YAML 格式铁律（新手 90% 的报错来自这里）：
+#    · 用空格缩进，绝对不能用 Tab
+#    · 冒号后面必须有一个空格： key: value   ✅   key:value  ❌
+#    · 缩进层级决定归属关系，对不齐就是另一个意思
+#    · 列表项用 "- " 开头
+# ═══════════════════════════════════════════════════════════════
+
+# 流水线的名字，会显示在 GitHub Actions 页面上。随便起，能认出来就行。
+name: test-ci
+
+
+# ── on：什么事件会触发这条流水线 ──────────────────────────────
+# 这是整个 CI 的开关。写错这里，流水线永远不会跑（而且不报错，静默失效）。
+on:
+  push:
+    # 只有推到哪个分支才触发？
+    # 想一想：如果这里不做限定会发生什么？（提示：你开 PR 后，再往那个分支推一次）
+    branches: [ main ]
+
+  # 开 PR 时也触发。不需要配置项，写个 pull_request: 就行（已经写好了）
+  pull_request:
+
+  # 允许在 Actions 页面手动点按钮触发，调试期很有用（已经写好了）
+  workflow_dispatch:
+
+
+# ── jobs：这条流水线包含哪些任务 ─────────────────────────────
+jobs:
+  # 这是 job 的 id，自己起名（比如 build）。会显示在 Actions 的运行详情里。
+  build:
+
+    # 这个 job 跑在什么机器上？
+    # 可选值：ubuntu-latest / windows-latest / macos-latest
+    # 想一想：Android 构建该选哪个？为什么？（提示：查一下各系统的计费倍率）
+    runs-on: ubuntu-latest
+
+    # steps：这个 job 分几步做。按顺序执行，前一步失败后面就不跑了。
+    steps:
+
+      # ── 第 1 步：把代码搞到这台机器上 ──────────────────────
+      # runner 是一台全新的空机器，什么都没有。不做这步就没有代码。
+      #
+      # 这一步不用自己写脚本，用社区现成的 action。
+      # 去搜：github.com/actions/checkout   看它的用法和当前版本号
+      - name: action checkout
+        uses: actions/checkout@v7
+
+      # ── 第 2 步：装 JDK ───────────────────────────────────
+      # Gradle 本身是 Java 程序，没有 JDK 就跑不了 ./gradlew
+      #
+      # 去搜：github.com/actions/setup-java   看它需要哪些 with 参数
+      #
+      # ⚠️ java-version 这里【故意填 11】，不要填别的。
+      #    你需要经历一次真实的红色构建，这是 Day 1 最值钱的部分。
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin          # JDK 发行版，用 temurin 就行
+          java-version: '17'
+
+      # ── 第 3 步：编译 ────────────────────────────────────
+      # 这步是跑命令，不是用 action，所以关键字是 run 而不是 uses。
+      #
+      # 填你在【任务 1】本地验证过的那条 Gradle 命令。
+      #
+      # 💡 注意一件事：这里完全没有配置 Android SDK。
+      #    构建却能成功——为什么？（这是任务 2 的验收题之一，想清楚再往下走）
+      - name: assembleDebug
+        run: ./gradlew assembleDebug
+
+
+# ═══════════════════════════════════════════════════════════════
+#  填完自查（在 push 之前逐条对）
+#
+#  □ 文件路径是 .github/workflows/ci.yml —— 少一层目录 GitHub 完全不理你，
+#    而且【不会报错】，你只会看到 Actions 页面空空如也
+#  □ 全文没有 Tab 字符（编辑器里开"显示空白字符"看一眼）
+#  □ 每个冒号后面都有空格
+#  □ 所有 <<< >>> 都已替换，提示注释已删除
+#  □ java-version 填的是 11（故意的）
+#  □ 你能回答验收题：
+#      · runs-on 为什么不选 macos？
+#      · push 为什么要限定 branches？
+#      · 没配 Android SDK 为什么能构建成功？
+#
+#  验证 YAML 语法（可选，push 前自查）：
+#      python3 -c "import yaml,sys; yaml.safe_load(open('.github/workflows/ci.yml')); print('YAML 语法 OK')"
+#  或者直接 push，让 GitHub 告诉你——语法错的 workflow 会在 Actions 页面
+#  显示一个红色的 "Invalid workflow file" 错误。
+# ═══════════════════════════════════════════════════════════════
