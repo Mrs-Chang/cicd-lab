@@ -3,26 +3,23 @@ name: test-ci
 on:
   # 限定 main：不限定的话，开着 PR 时再往该分支推一次，同一份代码会被
   # push 和 pull_request 各触发一遍，白烧一倍构建时间。
-  # ⚠️ 下面两处 paths-ignore 是重复的。不能用 YAML 锚点（&x / *x）去掉重复
-  # ——GitHub Actions 的 workflow 解析器不支持锚点，而本地的 yaml 解析器接受，
-  # 本地怎么验都验不出来，推上去才会看到 "Invalid workflow file"。
   push:
     branches: [ main ]
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - 'LICENSE'
-      - '.gitignore'
+  # ⚠️ 这里【故意不加 paths-ignore】。加过它，然后实测发现它和分支保护死锁：
+  #
+  #   分支保护要求 required check `build` 必须【通过】
+  #   paths-ignore 让纯文档 PR 不触发 workflow → `build` 这个 check【根本不存在】
+  #   GitHub 对「必需但从未出现的 check」的处理是【一直等】
+  #   → PR 永久 BLOCKED（实测 PR #8：checks 为空数组，mergeStateStatus 为 BLOCKED）
+  #
+  # 根因：分支保护的语义是「必须通过」，paths 过滤的语义是「不产生结果」，
+  #       而【「没有结果」不等于「通过」】。两个各自正确的配置对不上。
+  #
+  # 三种解法及代价见 实验记录.md [8/3 #3]。这里选择「不做这个优化」：
+  # 本仓库纯文档 PR 接近于零，省下的时间趋近 0，而另两种解法都在增加
+  # 静默失效的表面积。真实项目里若文档 PR 频繁，应选「job 照常跑、
+  # 在 job 内部跳过昂贵步骤」——它的 check 是诚实的，而占位 workflow 是伪造的。
   pull_request:
-    # 用 paths-ignore（黑名单）而不是 paths（白名单）。两者的失败方式不同：
-    #   paths 漏写一种文件类型 → 那类改动【永远不跑 CI】，静默漏检
-    #   paths-ignore 漏写      → 最多多跑几次，浪费但不漏
-    # 门禁类的东西必须 fail-safe：漏检的代价远大于浪费几分钟机器时间。
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - 'LICENSE'
-      - '.gitignore'
   # 允许在 Actions 页面手动触发，调试期有用。
   workflow_dispatch:
 
