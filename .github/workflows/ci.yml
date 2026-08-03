@@ -23,6 +23,30 @@ on:
   # 允许在 Actions 页面手动触发，调试期有用。
   workflow_dispatch:
 
+# ── concurrency：连续 push 时取消同一分支上还在跑的旧运行 ──────────
+#
+# 场景：连续 push 三次修复 → 三条流水线同时在跑，前两条跑的是【已被自己废弃的代码】。
+# 结果既浪费额度，又拖慢真正想看的那一次（并发额度被自己占着）。
+#
+# group 的设计：必须【每个分支一个 group】。
+#   写死成一个常量（比如 group: ci）→ 所有分支共用一个 group
+#   → 同事推他的分支会把你的运行取消掉，互相踩踏。
+# 所以 group 里必须带上区分维度：
+#   github.workflow  区分不同 workflow（将来加了 release.yml 不会互相取消）
+#   github.ref       区分分支 / PR（PR 事件下是 refs/pull/N/merge，天然按 PR 隔离）
+#
+# ⚠️ cancel-in-progress 什么时候【绝对不能】开：
+#   这条流水线目前只做检查（ktlint / 单测 / lint / 打包），取消是安全的 —— 没有副作用。
+#   但如果 job 里有【部署】【发布制品到 Nexus】【推 tag】这类操作，
+#   跑到一半被取消会留下【半完成状态】：包传了一半、tag 打了但产物没上传。
+#   那种 job 要么不开 cancel-in-progress，要么先做到幂等（可重复执行结果一致）。
+#
+# 所以更常见的做法是【按分支区别对待】：main 上不取消，PR 上取消。
+# 下面用表达式实现：只有非 main 分支才允许取消。
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   build:
     # Android 构建不需要 macOS。ubuntu runner 计费倍率 1x，macOS 是 10x。
