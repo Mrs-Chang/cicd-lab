@@ -3,9 +3,26 @@ name: test-ci
 on:
   # 限定 main：不限定的话，开着 PR 时再往该分支推一次，同一份代码会被
   # push 和 pull_request 各触发一遍，白烧一倍构建时间。
+  # ⚠️ 下面两处 paths-ignore 是重复的。不能用 YAML 锚点（&x / *x）去掉重复
+  # ——GitHub Actions 的 workflow 解析器不支持锚点，而本地的 yaml 解析器接受，
+  # 本地怎么验都验不出来，推上去才会看到 "Invalid workflow file"。
   push:
     branches: [ main ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
   pull_request:
+    # 用 paths-ignore（黑名单）而不是 paths（白名单）。两者的失败方式不同：
+    #   paths 漏写一种文件类型 → 那类改动【永远不跑 CI】，静默漏检
+    #   paths-ignore 漏写      → 最多多跑几次，浪费但不漏
+    # 门禁类的东西必须 fail-safe：漏检的代价远大于浪费几分钟机器时间。
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
   # 允许在 Actions 页面手动触发，调试期有用。
   workflow_dispatch:
 
