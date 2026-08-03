@@ -50,3 +50,6 @@ object VersionUtils {
         }
     }
 }
+
+// 故意的 ktlint 违规：普通函数用了非 camelCase 命名（不带 @Composable，无豁免）
+fun Deliberately_Bad_Name() = Unit
