@@ -52,6 +52,16 @@ jobs:
     # Android 构建不需要 macOS。ubuntu runner 计费倍率 1x，macOS 是 10x。
     runs-on: ubuntu-latest
 
+    # ── 实验 A：matrix 横向展开 ──────────────────────────────
+    strategy:
+      # fail-fast 与 matrix 【平级】，都在 strategy 下。
+      # 写进 matrix 里面会被当成一个矩阵维度，白展开一维。
+      fail-fast: false
+      # 拿 JDK 当维度：AGP 要求 17，但 21 已是 LTS，
+      # 「我们能不能升 21」这个问题真实团队每年都要答一次。
+      # 引号是故意的：YAML 会把 11.0 解析成浮点再转回 "11"，吃掉末尾 0。
+      jdk: ['17', '21']
+
     # 四道质量门禁，按「便宜的在前」排列：任一步失败，后面的 step 直接跳过。
     steps:
       - name: 检出代码
@@ -64,7 +74,7 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: ${{ matrix.jdk }}
 
       - name: 关卡1 代码格式检查 (ktlint)
         run: ./gradlew ktlintCheck
@@ -92,7 +102,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: reports-${{ github.run_number }}
+          name: reports-jdk${{ matrix.jdk }}-${{ github.run_number }}
           if-no-files-found: warn
           retention-days: 7
           path: |
@@ -112,7 +122,7 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: apk-debug-${{ github.run_number }}
+          name: apk-debug-jdk${{ matrix.jdk }}-${{ github.run_number }}
           if-no-files-found: error
           retention-days: 7
           path: app/build/outputs/apk/debug/*.apk
