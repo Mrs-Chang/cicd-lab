@@ -1,0 +1,101 @@
+# ══════════════════════════════════════════════════════════════════════
+# JDK 兼容性矩阵 —— 【不参与 PR 门禁】
+#
+# 为什么单独一个文件，而不是塞进 ci.yml：
+#
+# matrix 买到的是【覆盖率】，不是速度。实测（8/17）：
+#   ci.yml 单 job          墙钟 192s  机器 192s
+#   ci.yml + matrix(17,21) 墙钟 197s  机器 381s   ← 墙钟没变，机器翻倍
+# 因为 matrix 没有把工作【拆开】，它把工作【复制】到另一个环境跑了一遍。
+#
+# 而「这个项目能不能升 JDK 21」这个信息是【一次性】的 —— 不需要每次改代码
+# 都重新问一遍。所以它属于「每晚跑一次」，不属于「每个 PR 都跑」。
+#
+# 这就是真实项目里的标准分工：
+#   每个 PR   → 单环境、最快路径      → 买【快】（快速反馈）
+#   每晚/手动 → 全 matrix、慢测试     → 买【全】（覆盖率）
+#
+# ⚠️ 两个关于触发器的坑：
+#   1. schedule 只在【默认分支】上的 workflow 文件里生效。
+#      在 feature 分支上加 cron 永远不会触发 —— 而且不会有任何报错。
+#   2. workflow_dispatch 也要文件先进默认分支，才会出现在 Actions 页面
+#      和 `gh workflow run` 的列表里。所以这个文件合并前无法手动触发。
+# ══════════════════════════════════════════════════════════════════════
+name: jdk-compat
+
+on:
+  schedule:
+    # UTC 18:00 = 北京时间次日 02:00。选凌晨是因为它跟人抢不到资源。
+    # ⚠️ GitHub 的 cron 不保证准时，高峰期可能延迟几十分钟；
+    #    而且公开仓库连续 60 天无提交会自动停掉 schedule。
+    - cron: '0 18 * * *'
+  workflow_dispatch:
+
+# 定时任务不需要 cancel-in-progress（不会连续触发），
+# 但加上 group 防止手动触发和定时触发撞在一起。
+concurrency:
+  group: jdk-compat
+  cancel-in-progress: false
+
+jobs:
+  compat:
+    runs-on: ubuntu-latest
+
+    strategy:
+      # 关掉 fail-fast。这里的目的是【拿到完整的兼容性报告】：
+      # 17 挂了就中止 21，等于只知道「有环境挂了」，不知道「哪些环境挂了」。
+      # 这与 ci.yml 的取向相反 —— 那边要快速失败省钱，这边要信息完整。
+      fail-fast: false
+      matrix:
+        # 引号是故意的：YAML 会把 11.0 这类值解析成浮点再转回 "11"，
+        # 吃掉末尾的 0。版本号永远加引号。
+        # ⚠️ 必须有 matrix: 这一层。少了它，jdk 变成 strategy 的非法键，
+        #    GitHub 在解析阶段直接判死：0s 失败、0 个 job、0 个 check_run
+        #    （实测 run 32015434024）。
+        jdk: ['17', '21']
+
+    # 让 job 名字自带环境信息，Actions 列表里一眼看出哪个环境挂了。
+    name: JDK ${{ matrix.jdk }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.jdk }}
+          # 实测 setup-java 只花 1s —— 因为 temurin 17/21 已【预装】在
+          # ubuntu-latest 镜像里，这一步只是改 JAVA_HOME 指过去。
+          # 要一个非预装版本（如 JDK 8）会变成真下载，耗时几十秒。
+
+      - name: 打印实际生效的 JDK
+        run: java -version 2>&1
+
+      # 跑全套，因为兼容性问题可能出现在任何一环
+      # （编译期、注解处理器、Lint 的字节码分析都对 JDK 版本敏感）。
+      - name: 全套检查
+        run: ./gradlew ktlintCheck testDebugUnitTest lintDebug assembleDebug
+
+  # 汇总 job：把 N 个环境的结果压成一条结论。
+  #
+  # 这里【不是】给分支保护用的（本 workflow 不参与门禁），
+  # 而是为了让「定时任务失败」这件事有一个稳定的信号可以挂告警。
+  #
+  # ⚠️ if 条件不能省。每个 job 隐含 if: success()，上游红了这个 job 会被
+  # 【skip】。而 skip 在很多消费方（分支保护、告警规则）眼里等于【通过】——
+  # 门禁/告警会恰好在该报警的时候保持安静。
+  summary:
+    needs: [compat]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: 汇总兼容性结果
+        run: |
+          echo "compat 聚合结果 = ${{ needs.compat.result }}"
+          # matrix 展开的多个 job 聚合成【一个】result：
+          # 只要有一个不是 success，整体就不是 success。
+          if [ "${{ needs.compat.result }}" != "success" ]; then
+            echo "::error::有 JDK 环境不兼容，去 Actions 页面看是哪个"
+            exit 1
+          fi
+          echo "全部 JDK 环境通过"
