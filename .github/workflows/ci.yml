@@ -76,6 +76,9 @@ jobs:
       # ⚠️ 版本：官方最新是 v6.3.0。学习方案和大量博客里写的还是 v4 —— 照抄版本号是坑。
       - name: 配置 Gradle（依赖缓存）
         uses: gradle/actions/setup-gradle@v6
+        with:
+          # ⚠️ 仅实验分支需要，理由同 perf/build-cache
+          cache-read-only: false
 
       - name: 关卡1 代码格式检查 (ktlint)
         run: ./gradlew ktlintCheck
