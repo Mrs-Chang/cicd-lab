@@ -70,8 +70,15 @@ jobs:
       # 缓存 ~/.gradle/caches（下载的第三方依赖）和 ~/.gradle/wrapper（Gradle 发行版本身）。
       #
       # 为什么用 setup-gradle 而不是 setup-java 自带的 cache: gradle：
-      # 后者只缓存依赖；setup-gradle 还缓存 build cache / configuration cache，
-      # 并自动生成 Job Summary（列出本次执行了哪些 task、各多久），省掉翻日志。
+      # 后者只缓存依赖；setup-gradle 缓存整个 Gradle User Home —— 实测 678MB 分 8 条：
+      #   dependencies 351MB / transforms 159MB / wrapper-zips 129MB / generated-jars 39MB
+      # 其中 transforms 是 Android 把依赖 AAR 转成 dex 的结果，纯 CPU 活，
+      # 缓存它省下来的比省下载还多（打包那关 39s -> 8s）。
+      # 它还自动生成 Job Summary（本次执行了哪些 task、各多久），省掉翻日志。
+      #
+      # ⚠️ 它【不】缓存 Configuration Cache —— CC 数据在项目目录 .gradle/，
+      #    不在 Gradle User Home 里。实测即使给了 cache-encryption-key 也没被缓存，
+      #    所以 CC 在本仓库 CI 上收益为零（run 32350657887 / 32351565218）。
       #
       # ⚠️ 版本：官方最新是 v6.3.0。学习方案和大量博客里写的还是 v4 —— 照抄版本号是坑。
       - name: 配置 Gradle（依赖缓存）
