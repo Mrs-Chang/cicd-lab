@@ -66,6 +66,17 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      # ── 依赖缓存 ──────────────────────────────────────────
+      # 缓存 ~/.gradle/caches（下载的第三方依赖）和 ~/.gradle/wrapper（Gradle 发行版本身）。
+      #
+      # 为什么用 setup-gradle 而不是 setup-java 自带的 cache: gradle：
+      # 后者只缓存依赖；setup-gradle 还缓存 build cache / configuration cache，
+      # 并自动生成 Job Summary（列出本次执行了哪些 task、各多久），省掉翻日志。
+      #
+      # ⚠️ 版本：官方最新是 v6.3.0。学习方案和大量博客里写的还是 v4 —— 照抄版本号是坑。
+      - name: 配置 Gradle（依赖缓存）
+        uses: gradle/actions/setup-gradle@v6
+
       - name: 关卡1 代码格式检查 (ktlint)
         run: ./gradlew ktlintCheck
 
