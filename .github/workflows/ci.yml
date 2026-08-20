@@ -76,6 +76,11 @@ jobs:
       # ⚠️ 版本：官方最新是 v6.3.0。学习方案和大量博客里写的还是 v4 —— 照抄版本号是坑。
       - name: 配置 Gradle（依赖缓存）
         uses: gradle/actions/setup-gradle@v6
+        # 【故意不写 with:】默认行为就是对的：
+        #   cache-read-only 默认 = true（只有默认分支写缓存）
+        # 实测日志：「by default, the action only writes to the cache for jobs
+        # running on the default branch」。main 养缓存、PR 只读，既省 10GB 配额
+        # 也防缓存投毒。写死成 false 会让每个 PR 都上传一份 ~350MB。
 
       - name: 关卡1 代码格式检查 (ktlint)
         run: ./gradlew ktlintCheck
