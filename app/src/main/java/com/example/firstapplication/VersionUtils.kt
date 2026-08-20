@@ -50,3 +50,5 @@ object VersionUtils {
         }
     }
 }
+
+// 改一行源码，测「真实 PR」场景下 build cache 还能命中多少
