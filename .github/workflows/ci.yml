@@ -76,18 +76,18 @@ jobs:
       # ⚠️ 版本：官方最新是 v6.3.0。学习方案和大量博客里写的还是 v4 —— 照抄版本号是坑。
       - name: 配置 Gradle（依赖缓存）
         uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: false
+          # Configuration Cache 的数据存在【项目目录 .gradle/】而非 ~/.gradle，
+          # 且可能含敏感信息，所以 setup-gradle 要求提供加密 key 才肯缓存它。
+          # 不给这个 key = CC 每次 run 都从零算，日志里却照样打印 "entry stored"。
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
-      - name: 关卡1 代码格式检查 (ktlint)
-        run: ./gradlew ktlintCheck
-
-      - name: 关卡2 单元测试
-        run: ./gradlew testDebugUnitTest
-
-      - name: 关卡3 Android Lint
-        run: ./gradlew lintDebug
-
-      - name: 关卡4 编译 Debug 包
-        run: ./gradlew assembleDebug
+      # 四道关卡合并成【一次】 gradlew 调用。
+      # 原来 4 次独立调用 = 启动 + 配置阶段各付 4 遍（本地实测配置阶段 4.26s/次）。
+      # 代价：Actions 页面上不再是四个 step，红了要翻日志才知道是哪一关。
+      - name: 四道质量门禁（一次调用）
+        run: ./gradlew ktlintCheck testDebugUnitTest lintDebug assembleDebug
 
       # ── 诊断报告：只在失败时上传 ──────────────────────────
       # 必须放在所有关卡之后：steps 严格按顺序执行，放在前面时 app/build/reports/
